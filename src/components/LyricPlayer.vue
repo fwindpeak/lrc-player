@@ -112,11 +112,11 @@ const updateLyrics = () => {
 
   currentTime.value = (Date.now() - startTime.value) / 1000;
 
-  while (
-    currentIndex.value < parsedLyrics.value.length &&
-    parsedLyrics.value[currentIndex.value].time <= currentTime.value
-  ) {
-    currentIndex.value++;
+  const newIndex =
+    parsedLyrics.value.findIndex((lyric) => lyric.time > currentTime.value) - 1;
+
+  if (newIndex !== currentIndex.value && newIndex >= -1) {
+    currentIndex.value = Math.max(0, newIndex);
   }
 
   if (currentTime.value >= totalDuration.value) {
@@ -131,9 +131,9 @@ const handleTimeChange = (newTime: number) => {
   currentTime.value = newTime;
   startTime.value = Date.now() - newTime * 1000;
 
-  currentIndex.value =
+  const newIndex =
     parsedLyrics.value.findIndex((lyric) => lyric.time > newTime) - 1;
-  if (currentIndex.value < 0) currentIndex.value = 0;
+  currentIndex.value = Math.max(0, newIndex);
 };
 
 onUnmounted(() => {

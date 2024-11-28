@@ -78,7 +78,7 @@ const highlightedLyrics = computed(() => {
   return props.modelValue
     .split("\n")
     .map((line) => {
-      const timeTagMatch = line.match(/^\[(\d{2}:\d{2}\.\d{2})\]/);
+      const timeTagMatch = line.match(/^\[(\d{2}):(\d{2})\.(\d{2,3})\]/);
       if (timeTagMatch) {
         const timeTag = timeTagMatch[0];
         const lyric = line.slice(timeTag.length);
