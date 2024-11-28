@@ -18,7 +18,14 @@
         @drop.prevent="handleDrop"
         @dragover.prevent
       ></textarea>
-      <div ref="previewRef" class="preview" v-html="highlightedLyrics"></div>
+      <div ref="previewRef" class="preview">
+        <template v-for="(line, index) in highlightedLines" :key="index">
+          <div class="line">
+            <span v-if="line.timeTag" class="time-tag">{{ line.timeTag }}</span>
+            <span>{{ line.text }}</span>
+          </div>
+        </template>
+      </div>
     </div>
   </div>
 </template>
@@ -38,7 +45,7 @@ const emit = defineEmits<{
 const textareaRef = ref<HTMLTextAreaElement>();
 const previewRef = ref<HTMLDivElement>();
 
-// 同步滚动
+// 同步动
 const syncScroll = () => {
   if (textareaRef.value && previewRef.value) {
     previewRef.value.scrollTop = textareaRef.value.scrollTop;
@@ -74,22 +81,24 @@ const onInput = (e: Event) => {
   emit("change");
 };
 
-const highlightedLyrics = computed(() => {
-  return props.modelValue
-    .split("\n")
-    .map((line) => {
-      const timeTagMatch = line.match(/^\[(\d{2}):(\d{2})\.(\d{2,3})\]/);
-      if (timeTagMatch) {
-        const timeTag = timeTagMatch[0];
-        const lyric = line.slice(timeTag.length);
-        return `<span class="time-tag">${timeTag}</span>${lyric}`;
-      }
-      return line;
-    })
-    .join("<br>");
+interface HighlightedLine {
+  timeTag: string | null;
+  text: string;
+}
+
+const highlightedLines = computed<HighlightedLine[]>(() => {
+  return props.modelValue.split("\n").map((line) => {
+    const timeTagMatch = line.match(/^\[(\d{2}):(\d{2})\.(\d{2,3})\]/);
+    if (timeTagMatch) {
+      const timeTag = timeTagMatch[0];
+      const text = line.slice(timeTag.length);
+      return { timeTag, text };
+    }
+    return { timeTag: null, text: line };
+  });
 });
 
-// 添加保存文件功能
+// 加保存文件功能
 const saveToFile = () => {
   // 创建 Blob 对象
   const blob = new Blob([props.modelValue], {
@@ -162,6 +171,7 @@ const saveToFile = () => {
   height: 200px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  margin-bottom: 10px;
 }
 
 textarea {
@@ -175,11 +185,11 @@ textarea {
   font-family: monospace;
   font-size: 14px;
   line-height: 1.5;
-  color: transparent;
+  color: #666;
   background: transparent;
-  caret-color: #666; /* 让光标可见 */
   resize: none;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 textarea:focus {
@@ -202,37 +212,31 @@ textarea:focus {
   text-align: left;
   background: var(--editor-bg, #ffffff);
   z-index: 0;
+  box-sizing: border-box;
 }
 
-:deep(.time-tag) {
+.preview .line {
+  white-space: pre;
+  text-align: left;
+}
+
+.time-tag {
   color: #2196f3;
   font-weight: bold;
 }
 
 /* 暗色主题支持 */
 @media (prefers-color-scheme: dark) {
-  .save-button {
-    background-color: #2196f3;
-  }
-
-  .save-button:hover {
-    background-color: #1976d2;
-  }
-
-  .save-button:disabled {
-    background-color: #444444;
+  textarea {
+    color: #ccc;
+    background: #1a1a1a;
   }
 
   .preview {
     background: #1a1a1a;
-    color: #ccc;
   }
 
-  textarea {
-    caret-color: #ccc;
-  }
-
-  :deep(.time-tag) {
+  .time-tag {
     color: #64b5f6;
   }
 }
