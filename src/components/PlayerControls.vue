@@ -1,9 +1,24 @@
 <template>
   <div class="controls">
-    <button @click="$emit('toggle-play')">
-      {{ isPlaying ? "暂停" : "播放" }}
-    </button>
-    <button @click="$emit('reset')">重置</button>
+    <div class="buttons">
+      <button class="control-btn" @click="$emit('toggle-play')">
+        <svg v-if="isPlaying" class="icon" viewBox="0 0 24 24">
+          <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+        </svg>
+        <svg v-else class="icon" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+        <span class="btn-text">{{ isPlaying ? "暂停" : "播放" }}</span>
+      </button>
+      <button class="control-btn" @click="$emit('reset')">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path
+            d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+          />
+        </svg>
+        <span class="btn-text">重置</span>
+      </button>
+    </div>
 
     <div class="timeline">
       <div class="time-display">
@@ -47,12 +62,49 @@ const handleTimeChange = (event: Event) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
   margin-bottom: 20px;
 }
 
+.buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 80px;
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.control-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.btn-text {
+  font-size: 14px;
+}
+
 .timeline {
-  margin-top: 15px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -71,9 +123,21 @@ input[type="range"] {
   max-width: 400px;
 }
 
-button {
-  min-width: 80px;
-  margin-right: 10px;
-  padding: 5px 15px;
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .control-btn {
+    background: #333;
+    border-color: #666;
+    color: #fff;
+  }
+
+  .control-btn:hover {
+    background: #444;
+    border-color: #888;
+  }
+
+  .time-display {
+    color: #999;
+  }
 }
 </style>
