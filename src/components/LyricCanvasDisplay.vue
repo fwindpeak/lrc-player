@@ -38,29 +38,76 @@ const animationFrame = ref<number>();
 const width = props.width || 600;
 const height = props.height || 400;
 
+// 修改字体常量配置
+const FONT_FAMILY =
+  "'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif";
+const CURRENT_LINE_FONT_SIZE = 21; // 稍微调小默认字号
+const NORMAL_LINE_FONT_SIZE = 24;
+
 // 随机颜色生成
 const getRandomColor = () => {
   const colors = [
-    "#FF3366",
-    "#FF6633",
-    "#FFCC33",
-    "#33CC33",
-    "#3366FF",
-    "#9933FF",
+    "#FF66B2", // 亮粉色
+    "#66FF66", // 亮绿色
+    "#66FFFF", // 亮青色
+    "#FF99FF", // 亮紫色
+    "#FFFF66", // 亮黄色
+    "#FF9966", // 亮橙色
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-// 生成随机位置（确保文字完整显示）
-const getRandomPosition = (ctx: CanvasRenderingContext2D, text: string) => {
-  ctx.font = "24px Arial";
+// 优化后的位置计算函数
+const getRandomPosition = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  isCurrent: boolean
+) => {
+  const fontSize = isCurrent ? CURRENT_LINE_FONT_SIZE : NORMAL_LINE_FONT_SIZE;
+  ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+
+  // 为中文字符预留更多空间
   const metrics = ctx.measureText(text);
   const textWidth = metrics.width;
+  const textHeight = fontSize;
 
-  return {
-    x: Math.random() * (width - textWidth - 40) + 20,
-    y: Math.random() * (height - 60) + 40, // 保留上下边距
-  };
+  if (isCurrent) {
+    // 为当前行计算合适的缩放比例和位置
+    const maxWidth = width * 0.8; // 留出20%的边距，避免文字太靠近边缘
+    let scale = 1.0;
+
+    // 如果文字宽度超过最大宽度，计算合适的缩放比例
+    if (textWidth > maxWidth) {
+      scale = maxWidth / textWidth;
+      // 限制最小缩放比例，确保文字不会太小
+      scale = Math.max(scale, 0.5);
+    }
+
+    // 更新字体大小
+    const adjustedFontSize = Math.floor(fontSize * scale);
+    ctx.font = `${adjustedFontSize}px ${FONT_FAMILY}`;
+
+    // 重新计算调整后的文字宽度
+    const adjustedMetrics = ctx.measureText(text);
+    const adjustedWidth = adjustedMetrics.width;
+
+    // 计算水平和垂直居中的位置
+    const x = (width - adjustedWidth) / 2;
+    const safeY = height * 0.5;
+
+    return {
+      x,
+      y: safeY,
+      scale,
+    };
+  } else {
+    // 过去的歌词逻辑
+    return {
+      x: Math.random() * (width - textWidth * 0.8),
+      y: Math.random() * (height - textHeight),
+      scale: 1.0,
+    };
+  }
 };
 
 // 更新歌词状态
@@ -68,34 +115,43 @@ const updateLyricStates = () => {
   if (!canvasRef.value) return;
   const ctx = canvasRef.value.getContext("2d")!;
 
-  // 更新现有歌词的目标状态
   lyricStates.value.forEach((state, index) => {
     if (index === props.currentIndex) {
-      // 当前歌词
-      const { x, y } = getRandomPosition(ctx, state.text);
+      // 当前歌词 - 计算合适的位置和缩放
+      const { x, y, scale } = getRandomPosition(ctx, state.text, true);
       state.targetX = x;
       state.targetY = y;
-      state.targetScale = 1.2;
+      state.targetScale = scale * 2.0; // 保持放大效果，但考虑缩放比例
       state.targetAlpha = 1;
-      state.targetRotation = 0;
+      state.targetRotation = Math.sin(Date.now() / 1000) * 0.05; // 减小摇摆幅度
       state.color = getRandomColor();
     } else if (index < props.currentIndex) {
-      // 过去的歌词
-      state.targetScale = 0.6;
-      state.targetAlpha = 0.3;
-      state.targetRotation = Math.random() * 0.1 - 0.05;
+      // 过去的歌词 - 更自由的运动
+      const time = Date.now() / 2000;
+      state.targetX += Math.sin(time + index * 1.5) * 3;
+      state.targetY += Math.cos(time + index * 1.5) * 3;
+      state.targetScale = 0.5;
+      state.targetAlpha = 0.2; // 降低透明度
+      state.targetRotation = Math.sin(time + index) * 0.3;
+
+      // 让过去的歌词缓慢飘向屏幕边缘
+      if (state.targetY > height + 50 || state.targetY < -50) {
+        const { x, y } = getRandomPosition(ctx, state.text, false);
+        state.targetX = x;
+        state.targetY = y;
+      }
     } else {
       // 未来的歌词
       state.targetScale = 0;
       state.targetAlpha = 0;
-      state.targetRotation = Math.random() * 0.2 - 0.1;
+      state.targetRotation = 0;
     }
   });
 
   // 添加新歌词
   while (lyricStates.value.length < props.lyrics.length) {
     const text = props.lyrics[lyricStates.value.length].text;
-    const { x, y } = getRandomPosition(ctx, text);
+    const { x, y } = getRandomPosition(ctx, text, false);
 
     lyricStates.value.push({
       text,
@@ -119,41 +175,72 @@ const animate = () => {
   if (!canvasRef.value) return;
   const ctx = canvasRef.value.getContext("2d")!;
 
-  // 清空画布
   ctx.clearRect(0, 0, width, height);
 
-  // 更新和绘制每个歌词
-  lyricStates.value.forEach((state) => {
-    // 缓动动画
-    state.x += (state.targetX - state.x) * 0.1;
-    state.y += (state.targetY - state.y) * 0.1;
-    state.scale += (state.targetScale - state.scale) * 0.1;
-    state.alpha += (state.targetAlpha - state.alpha) * 0.1;
-    state.rotation += (state.targetRotation - state.rotation) * 0.1;
-
-    // 绘制歌词
-    ctx.save();
-    ctx.translate(state.x, state.y);
-    ctx.rotate(state.rotation);
-    ctx.scale(state.scale, state.scale);
-
-    // 设置文字样式
-    ctx.font = "24px Arial";
-    ctx.fillStyle = state.color;
-    ctx.globalAlpha = state.alpha;
-
-    // 添加文字阴影
-    ctx.shadowColor = "rgba(0,0,0,0.3)";
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-
-    // 绘制文字
-    ctx.fillText(state.text, 0, 0);
-    ctx.restore();
+  // 先绘制过去的歌词
+  lyricStates.value.forEach((state, index) => {
+    if (index < props.currentIndex) {
+      drawLyric(ctx, state);
+    }
   });
 
+  // 最后绘制当前歌词，确保它在最上层
+  if (lyricStates.value[props.currentIndex]) {
+    drawLyric(ctx, lyricStates.value[props.currentIndex]);
+  }
+
   animationFrame.value = requestAnimationFrame(animate);
+};
+
+// 抽取绘制歌词的函数
+const drawLyric = (ctx: CanvasRenderingContext2D, state: LyricState) => {
+  const easing = state === lyricStates.value[props.currentIndex] ? 0.1 : 0.05;
+
+  state.x += (state.targetX - state.x) * easing;
+  state.y += (state.targetY - state.y) * easing;
+  state.scale += (state.targetScale - state.scale) * easing;
+  state.alpha += (state.targetAlpha - state.alpha) * easing;
+  state.rotation += (state.targetRotation - state.rotation) * easing;
+
+  ctx.save();
+  ctx.translate(state.x, state.y);
+  ctx.rotate(state.rotation);
+  ctx.scale(state.scale, state.scale);
+
+  const isCurrent = state === lyricStates.value[props.currentIndex];
+  const fontSize = isCurrent ? CURRENT_LINE_FONT_SIZE : NORMAL_LINE_FONT_SIZE;
+  ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center"; // 添加文本对齐设置
+
+  if (isCurrent) {
+    // 当前歌词使用更强的发光效果
+    ctx.shadowColor = state.color;
+    ctx.shadowBlur = 25;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // 多层发光效果
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = state.alpha * (0.3 - i * 0.1);
+      ctx.fillStyle = state.color;
+      ctx.fillText(state.text, 0, 0);
+    }
+
+    // 主文本
+    ctx.shadowBlur = 5;
+    ctx.globalAlpha = state.alpha;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(state.text, 0, 0);
+  } else {
+    // 过去的歌词简化渲染
+    ctx.shadowBlur = 3;
+    ctx.globalAlpha = state.alpha;
+    ctx.fillStyle = state.color;
+    ctx.fillText(state.text, 0, 0);
+  }
+
+  ctx.restore();
 };
 
 // 监听当前歌词索引变化
@@ -189,7 +276,7 @@ onUnmounted(() => {
 .canvas-container {
   width: 100%;
   height: 400px;
-  background: linear-gradient(to bottom, #1a1a1a, #2d2d2d);
+  background: linear-gradient(to bottom, #111111, #1a1a1a);
   border-radius: 8px;
   overflow: hidden;
 }
