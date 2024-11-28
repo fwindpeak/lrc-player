@@ -19,7 +19,7 @@
         @dragover.prevent
       ></textarea>
       <div ref="previewRef" class="preview">
-        <template v-for="(line, index) in highlightedLines" :key="index">
+        <template v-for="(line, _index) in highlightedLines" :key="_index">
           <div class="line">
             <span v-if="line.timeTag" class="time-tag">{{ line.timeTag }}</span>
             <span>{{ line.text }}</span>

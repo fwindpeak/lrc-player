@@ -66,6 +66,7 @@ import LyricEditor from "./LyricEditor.vue";
 import LyricDisplay from "./LyricDisplay.vue";
 import PlayerControls from "./PlayerControls.vue";
 import LyricCanvasDisplay from "./LyricCanvasDisplay.vue";
+import type { LyricLine } from "../composables/useLyricParser";
 
 const STORAGE_KEY = "lrc-editor-content";
 
@@ -77,7 +78,7 @@ const lrcDefault = `[00:00.00] 歌曲名称
 [00:12.00]第二句歌词`;
 
 const lrcInput = ref(localStorage.getItem(STORAGE_KEY) || lrcDefault);
-const parsedLyrics = ref([]);
+const parsedLyrics = ref<LyricLine[]>([]);
 const currentIndex = ref(0);
 
 const { parseLRC, totalDuration } = useLyricParser();
