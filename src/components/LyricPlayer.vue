@@ -13,7 +13,33 @@
       @time-change="handleTimeChange"
     />
 
-    <LyricDisplay :lyrics="parsedLyrics" :current-index="currentIndex" />
+    <div class="display-container">
+      <div class="display-tabs">
+        <button
+          :class="{ active: displayMode === 'list' }"
+          @click="displayMode = 'list'"
+        >
+          列表模式
+        </button>
+        <button
+          :class="{ active: displayMode === 'canvas' }"
+          @click="displayMode = 'canvas'"
+        >
+          动画模式
+        </button>
+      </div>
+
+      <LyricDisplay
+        v-if="displayMode === 'list'"
+        :lyrics="parsedLyrics"
+        :current-index="currentIndex"
+      />
+      <LyricCanvasDisplay
+        v-else
+        :lyrics="parsedLyrics"
+        :current-index="currentIndex"
+      />
+    </div>
   </div>
 </template>
 
@@ -24,6 +50,7 @@ import { useTimeControl } from "../composables/useTimeControl";
 import LyricEditor from "./LyricEditor.vue";
 import LyricDisplay from "./LyricDisplay.vue";
 import PlayerControls from "./PlayerControls.vue";
+import LyricCanvasDisplay from "./LyricCanvasDisplay.vue";
 
 const STORAGE_KEY = "lrc-editor-content";
 
@@ -48,6 +75,9 @@ const {
   pause,
   reset: resetTime,
 } = useTimeControl();
+
+// 添加显示模式状态
+const displayMode = ref<"list" | "canvas">("list");
 
 // 监听 lrcInput 的变化
 watch(lrcInput, (newValue) => {
@@ -121,5 +151,42 @@ handleLyricChange();
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.display-container {
+  margin-top: 20px;
+}
+
+.display-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.display-tabs button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #eee;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.display-tabs button.active {
+  background: #2196f3;
+  color: white;
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .display-tabs button {
+    background: #333;
+    color: #ccc;
+  }
+
+  .display-tabs button.active {
+    background: #2196f3;
+    color: white;
+  }
 }
 </style>
