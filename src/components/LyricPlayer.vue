@@ -93,7 +93,7 @@ const {
 } = useTimeControl();
 
 // 添加显示模式状态
-const displayMode = ref<"list" | "canvas">("list");
+const displayMode = ref<"list" | "canvas">("canvas");
 
 // 在 script setup 中添加
 const isDarkTheme = ref(

@@ -41,8 +41,8 @@ const height = props.height || 400;
 // 修改字体常量配置
 const FONT_FAMILY =
   "'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif";
-const CURRENT_LINE_FONT_SIZE = 21; // 稍微调小默认字号
-const NORMAL_LINE_FONT_SIZE = 24;
+const CURRENT_LINE_FONT_SIZE = 32; // 调小当前行字号
+const NORMAL_LINE_FONT_SIZE = 20; // 调小普通行字号
 
 // 随机颜色生成
 const getRandomColor = () => {
@@ -66,46 +66,53 @@ const getRandomPosition = (
   const fontSize = isCurrent ? CURRENT_LINE_FONT_SIZE : NORMAL_LINE_FONT_SIZE;
   ctx.font = `${fontSize}px ${FONT_FAMILY}`;
 
-  // 为中文字符预留更多空间
+  // 计算文本尺寸
   const metrics = ctx.measureText(text);
   const textWidth = metrics.width;
   const textHeight = fontSize;
 
   if (isCurrent) {
     // 为当前行计算合适的缩放比例和位置
-    const maxWidth = width * 0.8; // 留出20%的边距，避免文字太靠近边缘
+    const maxWidth = width * 0.8; // 留出20%的边距
+    const maxHeight = height * 0.8; // 留出20%的边距
     let scale = 1.0;
 
-    // 如果文字宽度超过最大宽度，计算合适的缩放比例
-    if (textWidth > maxWidth) {
-      scale = maxWidth / textWidth;
-      // 限制最小缩放比例，确保文字不会太小
-      scale = Math.max(scale, 0.5);
-    }
+    // 计算水平和垂直方向需要的缩放比例
+    const horizontalScale = maxWidth / textWidth;
+    const verticalScale = maxHeight / textHeight;
 
-    // 更新字体大小
-    const adjustedFontSize = Math.floor(fontSize * scale);
-    ctx.font = `${adjustedFontSize}px ${FONT_FAMILY}`;
+    // 使用较小的缩放比例，确保文字完全显示
+    scale = Math.min(horizontalScale, verticalScale, 1.0);
 
-    // 重新计算调整后的文字宽度
-    const adjustedMetrics = ctx.measureText(text);
-    const adjustedWidth = adjustedMetrics.width;
+    // 确保最小缩放比例
+    // scale = Math.max(scale, 0.3);
 
-    // 计算水平和垂直居中的位置
-    const x = (width - adjustedWidth) / 2;
-    const safeY = height * 0.5;
+    // 计算安全的显示范围
+    const safeWidth = width * 0.8;
+    const safeHeight = height * 0.8;
+
+    // 在安全范围内添加较小的随机偏移
+    const maxOffset = Math.min(safeWidth, safeHeight) * 0.1;
+    const randomOffsetX = (Math.random() - 0.5) * maxOffset;
+    const randomOffsetY = (Math.random() - 0.5) * maxOffset;
+
+    // 确保文字始终在可见区域内
+    const x = width / 2 + randomOffsetX;
+    const y = height / 2 + randomOffsetY;
+
+    return { x, y, scale };
+  } else {
+    // 过去的歌词完全随机位置，允许被裁剪
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+
+    // 为过去的歌词添加更大的随机缩放
+    const randomScale = 0.3 + Math.random() * 0.3;
 
     return {
       x,
-      y: safeY,
-      scale,
-    };
-  } else {
-    // 过去的歌词逻辑
-    return {
-      x: Math.random() * (width - textWidth * 0.8),
-      y: Math.random() * (height - textHeight),
-      scale: 1.0,
+      y,
+      scale: randomScale,
     };
   }
 };
@@ -121,7 +128,7 @@ const updateLyricStates = () => {
       const { x, y, scale } = getRandomPosition(ctx, state.text, true);
       state.targetX = x;
       state.targetY = y;
-      state.targetScale = scale * 2.0; // 保持放大效果，但考虑缩放比例
+      state.targetScale = scale; // 保持放大效果，但考虑缩放比例
       state.targetAlpha = 1;
       state.targetRotation = Math.sin(Date.now() / 1000) * 0.05; // 减小摇摆幅度
       state.color = getRandomColor();
@@ -131,7 +138,7 @@ const updateLyricStates = () => {
       state.targetX += Math.sin(time + index * 1.5) * 3;
       state.targetY += Math.cos(time + index * 1.5) * 3;
       state.targetScale = 0.5;
-      state.targetAlpha = 0.2; // 降低透明度
+      state.targetAlpha = 0.4; // 降低透明度
       state.targetRotation = Math.sin(time + index) * 0.3;
 
       // 让过去的歌词缓慢飘向屏幕边缘
